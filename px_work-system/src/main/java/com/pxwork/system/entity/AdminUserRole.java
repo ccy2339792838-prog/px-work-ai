@@ -1,4 +1,4 @@
-package com.pxwork.common.entity;
+package com.pxwork.system.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -11,9 +11,6 @@ import java.io.Serializable;
  * <p>
  * 管理员-角色关联表
  * </p>
- *
- * @author TraeAI
- * @since 2026-03-13
  */
 @Data
 @EqualsAndHashCode(callSuper = false)

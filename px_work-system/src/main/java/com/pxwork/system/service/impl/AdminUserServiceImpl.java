@@ -1,12 +1,12 @@
-package com.pxwork.common.service.impl;
+package com.pxwork.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.pxwork.common.entity.AdminUser;
-import com.pxwork.common.entity.AdminUserRole;
-import com.pxwork.common.mapper.AdminUserMapper;
-import com.pxwork.common.service.AdminUserRoleService;
-import com.pxwork.common.service.AdminUserService;
+import com.pxwork.system.entity.AdminUser;
+import com.pxwork.system.entity.AdminUserRole;
+import com.pxwork.system.mapper.AdminUserMapper;
+import com.pxwork.system.service.AdminUserRoleService;
+import com.pxwork.system.service.AdminUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,14 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * <p>
- * 后台管理员表 服务实现类
- * </p>
- *
- * @author TraeAI
- * @since 2026-03-12
- */
 @Service
 public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser> implements AdminUserService {
 

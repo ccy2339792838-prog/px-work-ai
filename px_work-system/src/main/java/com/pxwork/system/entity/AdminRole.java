@@ -1,4 +1,4 @@
-package com.pxwork.common.entity;
+package com.pxwork.system.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -14,9 +14,6 @@ import java.time.LocalDateTime;
  * <p>
  * 管理员角色表
  * </p>
- *
- * @author TraeAI
- * @since 2026-03-13
  */
 @Data
 @EqualsAndHashCode(callSuper = false)

@@ -2,8 +2,8 @@ package com.pxwork.api.controller.backend;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.pxwork.common.entity.AdminRole;
-import com.pxwork.common.service.AdminRoleService;
+import com.pxwork.system.entity.AdminRole;
+import com.pxwork.system.service.AdminRoleService;
 import com.pxwork.common.utils.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

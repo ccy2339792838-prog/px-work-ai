@@ -1,6 +1,5 @@
-package com.pxwork.common.entity;
+package com.pxwork.course.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -11,20 +10,16 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * <p>
- * 后台管理员表
- * </p>
- *
- * @author TraeAI
- * @since 2026-03-12
+ * 课程主表
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("admin_users")
-public class AdminUser implements Serializable {
+@TableName("courses")
+public class Course implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -32,42 +27,34 @@ public class AdminUser implements Serializable {
     private Long id;
 
     /**
-     * 姓名
+     * 分类ID
+     */
+    private Long categoryId;
+
+    /**
+     * 课程名称
      */
     private String name;
 
     /**
-     * 邮箱(登录账号)
+     * 封面图片URL
      */
-    private String email;
+    private String coverUrl;
 
     /**
-     * 密码
+     * 课程简介
      */
-    private String password;
+    private String description;
 
     /**
-     * 密码盐
+     * 状态: 0-草稿, 1-发布
      */
-    private String salt;
+    private Integer status;
 
-    /**
-     * 是否超管 1:是 0:否
-     */
-    private Integer isSuper;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
     @TableField(exist = false)
-    private java.util.List<Long> roleIds;
+    private List<CourseChapter> chapters;
 }

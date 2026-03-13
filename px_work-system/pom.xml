@@ -11,4 +11,24 @@
 
     <artifactId>px_work-system</artifactId>
 
+    <dependencies>
+        <!-- 依赖公共模块 -->
+        <dependency>
+            <groupId>com.pxwork</groupId>
+            <artifactId>px_work-common</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus 依赖 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!-- Lombok 依赖 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

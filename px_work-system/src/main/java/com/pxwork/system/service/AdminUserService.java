@@ -1,19 +1,9 @@
-package com.pxwork.common.service;
+package com.pxwork.system.service;
 
-import com.pxwork.common.entity.AdminUser;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.pxwork.system.entity.AdminUser;
 
-/**
- * <p>
- * 后台管理员表 服务类
- * </p>
- *
- * @author TraeAI
- * @since 2026-03-12
- */
 public interface AdminUserService extends IService<AdminUser> {
-
     boolean createAdminUser(AdminUser adminUser);
-
     boolean updateAdminUser(AdminUser adminUser);
 }
