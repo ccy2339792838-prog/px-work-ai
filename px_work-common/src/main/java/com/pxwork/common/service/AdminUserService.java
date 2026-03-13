@@ -13,4 +13,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface AdminUserService extends IService<AdminUser> {
 
+    boolean createAdminUser(AdminUser adminUser);
+
+    boolean updateAdminUser(AdminUser adminUser);
 }
