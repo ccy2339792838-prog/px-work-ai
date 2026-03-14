@@ -1,7 +1,6 @@
 package com.pxwork.course.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -10,43 +9,31 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
 
-/**
- * 课程分类
- */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("course_categories")
-public class CourseCategory implements Serializable {
+@TableName("course_hour_records")
+public class CourseHourRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 父级ID
-     */
-    private Long parentId;
+    private Long userId;
 
-    /**
-     * 分类名称
-     */
-    private String name;
+    private Long courseId;
 
-    private String industry;
+    private Long resourceId;
 
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private Integer totalDuration;
+
+    private Integer finishedDuration;
+
+    private Integer isFinished;
 
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-
-    @TableField(exist = false)
-    private List<CourseCategory> children;
 }

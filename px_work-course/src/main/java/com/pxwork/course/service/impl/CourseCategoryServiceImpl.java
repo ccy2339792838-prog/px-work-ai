@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.pxwork.course.entity.CourseCategory;
 import com.pxwork.course.mapper.CourseCategoryMapper;
@@ -14,8 +16,13 @@ import com.pxwork.course.service.CourseCategoryService;
 public class CourseCategoryServiceImpl extends ServiceImpl<CourseCategoryMapper, CourseCategory> implements CourseCategoryService {
 
     @Override
-    public List<CourseCategory> listTree() {
-        List<CourseCategory> allCategories = list();
+    public List<CourseCategory> listTree(String industry) {
+        LambdaQueryWrapper<CourseCategory> queryWrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(industry)) {
+            queryWrapper.eq(CourseCategory::getIndustry, industry);
+        }
+        queryWrapper.orderByAsc(CourseCategory::getSort).orderByAsc(CourseCategory::getId);
+        List<CourseCategory> allCategories = list(queryWrapper);
         return buildTree(allCategories, 0L);
     }
 

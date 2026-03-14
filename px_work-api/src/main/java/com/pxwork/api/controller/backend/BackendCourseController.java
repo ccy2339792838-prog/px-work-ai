@@ -1,5 +1,15 @@
 package com.pxwork.api.controller.backend;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pxwork.common.utils.Result;
@@ -7,11 +17,9 @@ import com.pxwork.course.entity.Course;
 import com.pxwork.course.entity.CourseChapter;
 import com.pxwork.course.service.CourseChapterService;
 import com.pxwork.course.service.CourseService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
 
 /**
  * <p>
@@ -39,7 +47,8 @@ public class BackendCourseController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String targetRole) {
         
         Page<Course> page = new Page<>(current, size);
         LambdaQueryWrapper<Course> queryWrapper = new LambdaQueryWrapper<>();
@@ -52,6 +61,9 @@ public class BackendCourseController {
         }
         if (status != null) {
             queryWrapper.eq(Course::getStatus, status);
+        }
+        if (StringUtils.hasText(targetRole)) {
+            queryWrapper.like(Course::getTargetRoles, targetRole);
         }
         queryWrapper.orderByDesc(Course::getCreatedAt);
         

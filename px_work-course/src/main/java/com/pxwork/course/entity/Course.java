@@ -56,6 +56,10 @@ public class Course implements Serializable {
      */
     private Long categoryId;
 
+    private java.math.BigDecimal creditHours;
+
+    private String targetRoles;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
