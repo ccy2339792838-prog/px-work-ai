@@ -10,58 +10,22 @@ import lombok.experimental.Accessors;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 课程课时
- */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("course_hours")
-public class CourseHour implements Serializable {
+@TableName("user_course_enrollments")
+public class UserCourseEnrollment implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 章节ID
-     */
-    private Long chapterId;
+    private Long userId;
 
-    /**
-     * 课时名称
-     */
-    private String name;
+    private Long courseId;
 
-    /**
-     * 类型: 1-视频, 2-图文
-     */
-    private Integer type;
-
-    /**
-     * 关联资源ID
-     */
-    private Long resourceId;
-
-    /**
-     * 时长(秒)
-     */
-    private Integer duration;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
-
-    /**
-     * 图文内容
-     */
-    private String content;
-
-    private String liveUrl;
-
-    private String playbackUrl;
+    private Integer status;
 
     private LocalDateTime createdAt;
 

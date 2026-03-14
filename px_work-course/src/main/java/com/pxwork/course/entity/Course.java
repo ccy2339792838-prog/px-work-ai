@@ -60,6 +60,12 @@ public class Course implements Serializable {
 
     private String targetRoles;
 
+    private String trainingBatch;
+
+    private Integer courseMode;
+
+    private String offlineLocation;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

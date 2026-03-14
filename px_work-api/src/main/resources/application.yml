@@ -22,3 +22,13 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto # 配置主键自增
+
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  is-read-header: true
+  is-read-cookie: true
+  token-style: uuid

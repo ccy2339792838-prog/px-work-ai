@@ -1,5 +1,24 @@
 package com.pxwork.api.controller.backend;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -9,19 +28,10 @@ import com.pxwork.common.service.UserService;
 import com.pxwork.common.utils.Result;
 import com.pxwork.system.entity.SysDict;
 import com.pxwork.system.service.SysDictService;
+
 import cn.dev33.satoken.secure.SaSecureUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.*;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -33,7 +43,7 @@ import java.util.stream.Collectors;
  */
 @Tag(name = "学员管理", description = "学员相关的接口")
 @RestController
-@RequestMapping({"/user", "/backend/user"})
+@RequestMapping("/backend/user")
 public class UserController {
 
     @Autowired
@@ -60,14 +70,14 @@ public class UserController {
     }
 
     @Operation(summary = "修改学员", description = "更新学员信息(支持分配部门)")
-    @PostMapping("/update")
+    @PutMapping("/update")
     public Result<Boolean> update(@RequestBody User user) {
         boolean success = userService.updateUser(user);
         return success ? Result.success(true) : Result.fail("更新失败");
     }
 
     @Operation(summary = "删除学员", description = "根据ID删除学员")
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
         boolean success = userService.removeById(id);
         return success ? Result.success(true) : Result.fail("删除失败");

@@ -1,8 +1,9 @@
 package com.pxwork.resource.mapper;
 
+import org.apache.ibatis.annotations.Mapper;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.pxwork.resource.entity.Resource;
-import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>

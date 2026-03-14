@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +31,11 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         if (StringUtils.isNotBlank(adminUser.getPassword())) {
             adminUser.setPassword(SaSecureUtil.sha256(adminUser.getPassword()));
         }
+        LocalDateTime now = LocalDateTime.now();
+        if (adminUser.getCreatedAt() == null) {
+            adminUser.setCreatedAt(now);
+        }
+        adminUser.setUpdatedAt(now);
         boolean saved = this.save(adminUser);
         if (!saved) {
             return false;
@@ -42,18 +48,18 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateAdminUser(AdminUser adminUser) {
-        // 1. 更新管理员基本信息
+        if (StringUtils.isNotBlank(adminUser.getPassword())) {
+            adminUser.setPassword(SaSecureUtil.sha256(adminUser.getPassword()));
+        }
+        adminUser.setUpdatedAt(LocalDateTime.now());
         boolean updated = this.updateById(adminUser);
         if (!updated) {
             return false;
         }
 
-        // 2. 更新角色关联（如果 roleIds 不为 null）
         if (adminUser.getRoleIds() != null) {
-            // 先删除旧关联
             adminUserRoleService.remove(new LambdaQueryWrapper<AdminUserRole>()
                     .eq(AdminUserRole::getAdminUserId, adminUser.getId()));
-            // 再保存新关联
             saveRoles(adminUser.getId(), adminUser.getRoleIds());
         }
         return true;

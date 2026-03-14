@@ -1,17 +1,26 @@
 package com.pxwork.api.controller.backend;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.pxwork.common.entity.Department;
 import com.pxwork.common.entity.UserDepartment;
 import com.pxwork.common.service.DepartmentService;
 import com.pxwork.common.service.UserDepartmentService;
 import com.pxwork.common.utils.Result;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * <p>
@@ -45,14 +54,14 @@ public class DepartmentController {
     }
 
     @Operation(summary = "修改部门", description = "更新部门信息")
-    @PostMapping("/update")
+    @PutMapping("/update")
     public Result<Boolean> update(@RequestBody Department department) {
         boolean success = departmentService.updateById(department);
         return success ? Result.success(true) : Result.fail("更新失败");
     }
 
     @Operation(summary = "删除部门", description = "根据ID删除部门")
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
         long children = departmentService.count(new LambdaQueryWrapper<Department>().eq(Department::getParentId, id));
         if (children > 0) {

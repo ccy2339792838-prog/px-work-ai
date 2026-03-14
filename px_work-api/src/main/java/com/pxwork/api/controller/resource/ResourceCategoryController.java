@@ -40,14 +40,14 @@ public class ResourceCategoryController {
     }
 
     @Operation(summary = "修改分类", description = "更新资源分类信息")
-    @PostMapping("/update")
+    @PutMapping("/update")
     public Result<Boolean> update(@RequestBody ResourceCategory category) {
         boolean success = resourceCategoryService.updateById(category);
         return success ? Result.success(true) : Result.fail("更新失败");
     }
 
     @Operation(summary = "删除分类", description = "根据ID删除资源分类")
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
         // TODO: Check if has children or resources before delete
         boolean success = resourceCategoryService.removeById(id);

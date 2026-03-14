@@ -51,7 +51,7 @@ public class ResourceController {
     }
 
     @Operation(summary = "重命名资源", description = "更新资源名称")
-    @PostMapping("/rename")
+    @PutMapping("/rename")
     public Result<Boolean> rename(@RequestBody Resource resource) {
         if (resource.getId() == null || StringUtils.isBlank(resource.getName())) {
             return Result.fail("参数错误");
@@ -66,7 +66,7 @@ public class ResourceController {
     }
 
     @Operation(summary = "删除资源", description = "根据ID删除资源")
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
         boolean success = resourceService.removeById(id);
         // TODO: Also delete physical file

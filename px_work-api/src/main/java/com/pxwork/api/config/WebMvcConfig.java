@@ -37,12 +37,24 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 注册后台管理拦截器
         registry.addInterceptor(adminInterceptor())
-                .addPathPatterns("/backend/**")
-                .excludePathPatterns("/backend/login", "/backend/captchaImage"); // 排除登录和验证码接口
+                .addPathPatterns(
+                        "/backend/**",
+                        "/admin-user/**",
+                        "/admin-role/**",
+                        "/department/**",
+                        "/resource/**",
+                        "/resource-category/**",
+                        "/upload/**",
+                        "/course/**")
+                .excludePathPatterns(
+                        "/backend/login",
+                        "/frontend/login",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/error");
 
-        // 注册前台学员拦截器
         registry.addInterceptor(frontInterceptor())
                 .addPathPatterns("/frontend/**")
                 .excludePathPatterns(
