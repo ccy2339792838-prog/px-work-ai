@@ -1,6 +1,7 @@
 package com.pxwork.api.controller.backend;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -106,7 +107,9 @@ public class BackendQuestionController {
         }
         try {
             String fileId = difyApiService.uploadFile(file);
-            Map<String, Object> inputs = Map.of("job_role", jobRoleTag);
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("job_role", jobRoleTag);
+            inputs.put("question_count", 5);
             String aiOutputJson = difyApiService.runGenerateWorkflow(inputs, fileId);
             List<Question> questions = aiQuestionParseUtil.parseQuestions(aiOutputJson, jobRoleTag, categoryId);
             if (questions.isEmpty()) {

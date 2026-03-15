@@ -2,6 +2,7 @@ package com.pxwork.common.service.ai;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import cn.hutool.http.ContentType;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSON;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +83,9 @@ public class DifyApiService {
                 file.put("type", "document");
                 file.put("transfer_method", "local_file");
                 file.put("upload_file_id", fileId);
-                requestBody.put("files", List.of(file));
+                List<Map<String, Object>> filesList = new ArrayList<>();
+                filesList.add(file);
+                requestBody.put("files", filesList);
             }
 
             try (HttpResponse response = HttpRequest.post(baseUrl + "/workflows/run")
@@ -95,7 +99,18 @@ public class DifyApiService {
                     throw new RuntimeException("调用 Dify 工作流失败");
                 }
 
-                JSONObject responseObj = JSONUtil.parseObj(body);
+                JSONObject responseObj;
+                try {
+                    JSON parsed = JSONUtil.parse(body);
+                    if (!(parsed instanceof JSONObject jsonObject)) {
+                        log.error("Dify workflow response is not JSON object, body={}", body);
+                        throw new RuntimeException("Dify 工作流响应格式错误");
+                    }
+                    responseObj = jsonObject;
+                } catch (RuntimeException ex) {
+                    log.error("Dify workflow response parse error, body={}", body, ex);
+                    throw new RuntimeException("Dify 工作流响应解析失败");
+                }
                 JSONObject data = responseObj.getJSONObject("data");
                 if (data == null) {
                     log.error("Dify workflow response missing data, body={}", body);
@@ -106,6 +121,9 @@ public class DifyApiService {
                 if (outputs == null) {
                     log.error("Dify workflow response missing outputs, body={}", body);
                     throw new RuntimeException("Dify 工作流响应缺少 outputs");
+                }
+                if (outputs instanceof CharSequence sequence) {
+                    return sequence.toString();
                 }
                 return JSONUtil.toJsonStr(outputs);
             }
