@@ -52,28 +52,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (!saved) {
             return false;
         }
-
-        saveDepartments(user.getId(), user.getDepartmentIds());
+        userDepartmentService.remove(new LambdaQueryWrapper<UserDepartment>()
+                .eq(UserDepartment::getUserId, user.getId()));
+        saveDepartment(user.getId(), user.getDepartmentId());
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateUser(User user) {
-        // 1. 更新学员基本信息
         boolean updated = this.updateById(user);
         if (!updated) {
             return false;
         }
-
-        // 2. 更新部门关联（如果 departmentIds 不为 null）
-        if (user.getDepartmentIds() != null) {
-            // 先删除旧关联
-            userDepartmentService.remove(new LambdaQueryWrapper<UserDepartment>()
-                    .eq(UserDepartment::getUserId, user.getId()));
-            // 再保存新关联
-            saveDepartments(user.getId(), user.getDepartmentIds());
-        }
+        userDepartmentService.remove(new LambdaQueryWrapper<UserDepartment>()
+                .eq(UserDepartment::getUserId, user.getId()));
+        saveDepartment(user.getId(), user.getDepartmentId());
         return true;
     }
     
@@ -91,33 +85,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return userPage;
         }
         
-        // 批量查询部门信息
         List<Long> userIds = userPage.getRecords().stream().map(User::getId).collect(Collectors.toList());
         List<UserDepartment> userDepartments = userDepartmentService.list(new LambdaQueryWrapper<UserDepartment>()
                 .in(UserDepartment::getUserId, userIds));
-                
-        if (userDepartments.isEmpty()) {
-            return userPage;
-        }
-        
-        List<Long> allDeptIds = userDepartments.stream().map(UserDepartment::getDepartmentId).distinct().collect(Collectors.toList());
-        if (allDeptIds.isEmpty()) {
-             return userPage;
-        }
-        
-        Map<Long, Department> deptMap = departmentService.listByIds(allDeptIds).stream()
+
+        Map<Long, Long> userDeptIdMap = userDepartments.stream()
+                .collect(Collectors.toMap(UserDepartment::getUserId, UserDepartment::getDepartmentId, (first, second) -> first));
+        List<Long> deptIds = userDeptIdMap.values().stream().distinct().collect(Collectors.toList());
+        Map<Long, Department> deptMap = deptIds.isEmpty() ? Map.of() : departmentService.listByIds(deptIds).stream()
                 .collect(Collectors.toMap(Department::getId, dept -> dept));
-        
-        // 组装数据
-        Map<Long, List<Department>> userDeptMap = userDepartments.stream()
-            .filter(ud -> deptMap.containsKey(ud.getDepartmentId()))
-            .collect(Collectors.groupingBy(
-                UserDepartment::getUserId,
-                Collectors.mapping(ud -> deptMap.get(ud.getDepartmentId()), Collectors.toList())
-            ));
-            
+
         for (User user : userPage.getRecords()) {
-            user.setDepartments(userDeptMap.get(user.getId()));
+            Long departmentId = userDeptIdMap.get(user.getId());
+            user.setDepartmentId(departmentId);
+            user.setDepartment(departmentId == null ? null : deptMap.get(departmentId));
         }
         
         return userPage;
@@ -141,15 +122,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return loginInfo;
     }
 
-    private void saveDepartments(Long userId, List<Long> departmentIds) {
-        if (departmentIds != null && !departmentIds.isEmpty()) {
-            List<UserDepartment> userDepartments = departmentIds.stream().map(deptId -> {
-                UserDepartment ud = new UserDepartment();
-                ud.setUserId(userId);
-                ud.setDepartmentId(deptId);
-                return ud;
-            }).collect(Collectors.toList());
-            userDepartmentService.saveBatch(userDepartments);
+    private void saveDepartment(Long userId, Long departmentId) {
+        if (departmentId != null) {
+            UserDepartment userDepartment = new UserDepartment();
+            userDepartment.setUserId(userId);
+            userDepartment.setDepartmentId(departmentId);
+            userDepartmentService.save(userDepartment);
         }
     }
 }

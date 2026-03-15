@@ -26,13 +26,16 @@ public class DifyApiService {
     @Value("${ai.dify.base-url}")
     private String baseUrl;
 
-    @Value("${ai.dify.api-key}")
-    private String apiKey;
+    @Value("${ai.dify.generate-key}")
+    private String generateKey;
+
+    @Value("${ai.dify.grade-key}")
+    private String gradeKey;
 
     public String uploadFile(MultipartFile file) {
         try (InputStream inputStream = file.getInputStream();
              HttpResponse response = HttpRequest.post(baseUrl + "/files/upload")
-                     .header("Authorization", "Bearer " + apiKey)
+                     .header("Authorization", "Bearer " + generateKey)
                      .form("file", inputStream, file.getOriginalFilename())
                      .form("user", USER)
                      .execute()) {
@@ -58,7 +61,15 @@ public class DifyApiService {
         }
     }
 
-    public String runWorkflow(Map<String, Object> inputs, String fileId) {
+    public String runGenerateWorkflow(Map<String, Object> inputs, String fileId) {
+        return runWorkflowWithKey(inputs, fileId, generateKey);
+    }
+
+    public String runGradeWorkflow(Map<String, Object> inputs) {
+        return runWorkflowWithKey(inputs, null, gradeKey);
+    }
+
+    private String runWorkflowWithKey(Map<String, Object> inputs, String fileId, String apiKey) {
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("inputs", inputs);

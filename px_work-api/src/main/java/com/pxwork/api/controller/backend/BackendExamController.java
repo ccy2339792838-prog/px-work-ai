@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +23,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pxwork.common.service.ai.DifyApiService;
+import com.pxwork.common.utils.JsonUtils;
 import com.pxwork.common.utils.Result;
 import com.pxwork.course.entity.Course;
 import com.pxwork.course.entity.Exam;
@@ -68,6 +75,12 @@ public class BackendExamController {
 
     @Autowired
     private UserExamAnswerService userExamAnswerService;
+
+    @Autowired
+    private DifyApiService difyApiService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Operation(summary = "考试分页列表")
     @GetMapping("/exams")
@@ -190,14 +203,83 @@ public class BackendExamController {
         return Result.success(result);
     }
 
-    @Operation(summary = "AI组卷预留")
-    @PostMapping("/exams/{id}/ai-generate")
-    public Result<Boolean> aiGenerate(@PathVariable Long id, @RequestBody @Validated AiGenerateRequest request) {
-        if (examService.getById(id) == null) {
-            return Result.fail("考试不存在");
+    @Operation(summary = "AI一键出卷")
+    @PostMapping(value = "/exams/ai-generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional(rollbackFor = Exception.class)
+    public Result<Long> aiGenerate(@RequestParam("file") MultipartFile file,
+            @RequestParam("courseId") Long courseId,
+            @RequestParam("title") String title,
+            @RequestParam("jobRoleTag") String jobRoleTag) {
+        if (file == null || file.isEmpty()) {
+            return Result.fail("课件文档不能为空");
         }
-        // 此处调用 AI 根据文本生成题目并入库
-        return Result.success(true);
+        if (courseId == null || courseId <= 0) {
+            return Result.fail("课程ID不能为空");
+        }
+        if (!StringUtils.hasText(title)) {
+            return Result.fail("试卷名称不能为空");
+        }
+        if (!StringUtils.hasText(jobRoleTag)) {
+            return Result.fail("岗位要求不能为空");
+        }
+        if (courseService.getById(courseId) == null) {
+            return Result.fail("课程不存在");
+        }
+        try {
+            String fileId = difyApiService.uploadFile(file);
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("job_role", jobRoleTag);
+            String aiRawJson = difyApiService.runGenerateWorkflow(inputs, fileId);
+            String cleanedJson = JsonUtils.cleanMarkdownJson(aiRawJson);
+            List<Question> questions = parseAiQuestions(cleanedJson, jobRoleTag);
+            if (questions.isEmpty()) {
+                return Result.fail("AI未生成有效题目");
+            }
+
+            boolean questionSaved = questionService.saveBatch(questions);
+            if (!questionSaved) {
+                return Result.fail("题库入库失败");
+            }
+
+            Exam exam = new Exam();
+            exam.setCourseId(courseId);
+            exam.setTitle(title);
+            exam.setDuration(90);
+            exam.setWeightProcess(new BigDecimal("0.30"));
+            exam.setWeightEnd(new BigDecimal("0.70"));
+            exam.setWeightPractical(BigDecimal.ZERO);
+            exam.setPassTotalScore(new BigDecimal("60"));
+            exam.setPassProcessScore(BigDecimal.ZERO);
+            exam.setPassEndScore(new BigDecimal("60"));
+            exam.setPassPracticalScore(BigDecimal.ZERO);
+            boolean examSaved = examService.save(exam);
+            if (!examSaved || exam.getId() == null) {
+                return Result.fail("试卷创建失败");
+            }
+
+            List<ExamQuestion> examQuestions = new ArrayList<>();
+            int sort = 1;
+            for (Question question : questions) {
+                if (question.getId() == null) {
+                    return Result.fail("题目入库后缺少ID，无法组装试卷");
+                }
+                ExamQuestion examQuestion = new ExamQuestion();
+                examQuestion.setExamId(exam.getId());
+                examQuestion.setQuestionId(question.getId());
+                examQuestion.setScore(new BigDecimal("10"));
+                examQuestion.setSort(sort++);
+                examQuestions.add(examQuestion);
+            }
+            if (!examQuestions.isEmpty()) {
+                boolean relationSaved = examQuestionService.saveBatch(examQuestions);
+                if (!relationSaved) {
+                    return Result.fail("试卷题目关联保存失败");
+                }
+            }
+            return Result.success("AI出卷成功，请在列表审阅微调", exam.getId());
+        } catch (Exception e) {
+            return Result.fail("AI出卷失败: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "待批改试卷详情")
@@ -359,12 +441,6 @@ public class BackendExamController {
     }
 
     @Data
-    public static class AiGenerateRequest {
-        @NotBlank(message = "教材文本不能为空")
-        private String materialText;
-    }
-
-    @Data
     public static class SubjectiveGradeRequest {
         @NotNull(message = "考试记录ID不能为空")
         private Long userExamId;
@@ -397,5 +473,103 @@ public class BackendExamController {
         private BigDecimal aiScore;
         private String aiComment;
         private String teacherComment;
+    }
+
+    private List<Question> parseAiQuestions(String cleanedJson, String jobRoleTag) throws Exception {
+        if (!StringUtils.hasText(cleanedJson)) {
+            return List.of();
+        }
+        JsonNode root = objectMapper.readTree(cleanedJson);
+        List<Question> result = new ArrayList<>();
+        if (root.isArray()) {
+            for (JsonNode node : root) {
+                Question question = toQuestion(node, jobRoleTag);
+                if (question != null) {
+                    result.add(question);
+                }
+            }
+            return result;
+        }
+        JsonNode itemsNode = root.get("questions");
+        if (itemsNode == null || !itemsNode.isArray()) {
+            itemsNode = root.get("list");
+        }
+        if (itemsNode == null || !itemsNode.isArray()) {
+            itemsNode = root.get("items");
+        }
+        if (itemsNode != null && itemsNode.isArray()) {
+            for (JsonNode node : itemsNode) {
+                Question question = toQuestion(node, jobRoleTag);
+                if (question != null) {
+                    result.add(question);
+                }
+            }
+            return result;
+        }
+        Question single = toQuestion(root, jobRoleTag);
+        if (single != null) {
+            result.add(single);
+        }
+        return result;
+    }
+
+    private Question toQuestion(JsonNode node, String jobRoleTag) throws Exception {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        String content = readText(node, "content");
+        if (!StringUtils.hasText(content)) {
+            return null;
+        }
+        Question question = new Question();
+        question.setJobRoleTag(jobRoleTag);
+        question.setQuestionType(normalizeQuestionType(readText(node, "question_type", "questionType")));
+        question.setContent(content);
+        question.setStandardAnswer(readText(node, "standard_answer", "standardAnswer"));
+        question.setAnalysis(readText(node, "analysis"));
+        String categoryText = readText(node, "category_id", "categoryId");
+        if (StringUtils.hasText(categoryText)) {
+            try {
+                question.setCategoryId(Long.parseLong(categoryText));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        JsonNode optionsNode = node.get("options");
+        if (optionsNode != null && !optionsNode.isNull()) {
+            if (optionsNode.isTextual()) {
+                question.setOptions(optionsNode.asText());
+            } else {
+                question.setOptions(objectMapper.writeValueAsString(optionsNode));
+            }
+        }
+        return question;
+    }
+
+    private String normalizeQuestionType(String rawType) {
+        if (!StringUtils.hasText(rawType)) {
+            return "short_answer";
+        }
+        String type = rawType.trim().toLowerCase();
+        return switch (type) {
+            case "single_choice", "single", "单选", "单选题" -> "single_choice";
+            case "short_answer", "short", "subjective", "简答", "简答题", "主观题" -> "short_answer";
+            case "case_analysis", "case", "案例分析", "案例分析题" -> "case_analysis";
+            case "practical_application", "practical", "实操", "实操题", "实操应用题" -> "practical_application";
+            default -> type;
+        };
+    }
+
+    private String readText(JsonNode node, String... names) {
+        for (String name : names) {
+            JsonNode value = node.get(name);
+            if (value == null || value.isNull()) {
+                continue;
+            }
+            String text = value.isTextual() ? value.asText() : value.toString();
+            if (StringUtils.hasText(text)) {
+                return text;
+            }
+        }
+        return null;
     }
 }

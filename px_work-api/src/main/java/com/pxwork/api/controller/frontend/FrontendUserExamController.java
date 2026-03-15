@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.pxwork.common.service.ai.DifyApiService;
+import com.pxwork.api.service.AsyncAiGradingService;
 import com.pxwork.common.utils.Result;
 import com.pxwork.common.utils.StpUserUtil;
 import com.pxwork.course.entity.Exam;
@@ -36,9 +36,6 @@ import com.pxwork.course.service.UserCourseEnrollmentService;
 import com.pxwork.course.service.UserExamAnswerService;
 import com.pxwork.course.service.UserExamService;
 
-import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotEmpty;
@@ -69,7 +66,7 @@ public class FrontendUserExamController {
     private UserExamAnswerService userExamAnswerService;
 
     @Autowired
-    private DifyApiService difyApiService;
+    private AsyncAiGradingService asyncAiGradingService;
 
     @Operation(summary = "开始考试")
     @PostMapping
@@ -187,7 +184,7 @@ public class FrontendUserExamController {
             answerDetail.setUserExamId(userExam.getId());
             answerDetail.setQuestionId(answer.getQuestionId());
             answerDetail.setUserAnswer(answer.getUserAnswer());
-            if (StringUtils.hasText(question.getOptions())) {
+            if (isObjectiveQuestion(question)) {
                 String standard = question.getStandardAnswer() == null ? "" : question.getStandardAnswer().trim();
                 boolean correct = standard.equalsIgnoreCase(studentAnswer);
                 if (correct) {
@@ -196,15 +193,8 @@ public class FrontendUserExamController {
                 answerDetail.setIsCorrect(correct ? 1 : 0);
                 answerDetail.setScore(correct ? questionScore : BigDecimal.ZERO);
             } else {
-                Map<String, Object> inputs = new HashMap<>();
-                inputs.put("question", question.getContent() == null ? "" : question.getContent());
-                inputs.put("standard_answer", question.getStandardAnswer() == null ? "" : question.getStandardAnswer());
-                inputs.put("student_answer", studentAnswer);
-                String aiOutputJson = difyApiService.runWorkflow(inputs, null);
-                AiJudgeResult aiJudgeResult = parseAiJudgeResult(aiOutputJson);
                 answerDetail.setIsCorrect(null);
-                answerDetail.setScore(aiJudgeResult.getScore());
-                answerDetail.setAiComment(aiJudgeResult.getComment());
+                answerDetail.setScore(BigDecimal.ZERO);
                 subjectiveCount++;
             }
             answerDetails.add(answerDetail);
@@ -217,6 +207,9 @@ public class FrontendUserExamController {
         userExam.setStatus(1);
         userExam.setSubmitTime(LocalDateTime.now());
         userExamService.updateById(userExam);
+        if (subjectiveCount > 0) {
+            asyncAiGradingService.gradeSubjectiveAnswers(userExam.getId());
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("userExamId", userExam.getId());
@@ -225,88 +218,20 @@ public class FrontendUserExamController {
         return Result.success(result);
     }
 
-    private AiJudgeResult parseAiJudgeResult(String aiOutputJson) {
-        BigDecimal score = BigDecimal.ZERO;
-        String comment = "";
-        if (!StringUtils.hasText(aiOutputJson)) {
-            return new AiJudgeResult(score, comment);
+    private boolean isObjectiveQuestion(Question question) {
+        if (StringUtils.hasText(question.getOptions())) {
+            return true;
         }
-        Object parsed = JSONUtil.parse(aiOutputJson);
-        JSONObject source;
-        if (parsed instanceof JSONObject jsonObject) {
-            source = jsonObject;
-        } else if (parsed instanceof JSONArray jsonArray && !jsonArray.isEmpty()) {
-            source = JSONUtil.parseObj(jsonArray.get(0));
-        } else {
-            return new AiJudgeResult(score, comment);
+        String type = question.getQuestionType();
+        if (!StringUtils.hasText(type)) {
+            return false;
         }
-        JSONObject candidate = source;
-        Object nested = source.get("result");
-        if (!(nested instanceof JSONObject)) {
-            nested = source.get("data");
-        }
-        if (!(nested instanceof JSONObject)) {
-            nested = source.get("output");
-        }
-        if (nested instanceof JSONObject nestedObj) {
-            candidate = nestedObj;
-        }
-        score = extractScore(candidate);
-        comment = extractComment(candidate);
-        return new AiJudgeResult(score, comment);
-    }
-
-    private BigDecimal extractScore(JSONObject jsonObject) {
-        Object scoreValue = jsonObject.get("score");
-        if (scoreValue == null) {
-            scoreValue = jsonObject.get("ai_score");
-        }
-        if (scoreValue == null) {
-            scoreValue = jsonObject.get("final_score");
-        }
-        if (scoreValue == null) {
-            return BigDecimal.ZERO;
-        }
-        try {
-            return new BigDecimal(String.valueOf(scoreValue));
-        } catch (Exception e) {
-            return BigDecimal.ZERO;
-        }
-    }
-
-    private String extractComment(JSONObject jsonObject) {
-        String comment = jsonObject.getStr("comment");
-        if (StringUtils.hasText(comment)) {
-            return comment;
-        }
-        comment = jsonObject.getStr("ai_comment");
-        if (StringUtils.hasText(comment)) {
-            return comment;
-        }
-        comment = jsonObject.getStr("feedback");
-        if (StringUtils.hasText(comment)) {
-            return comment;
-        }
-        comment = jsonObject.getStr("reason");
-        return comment == null ? "" : comment;
-    }
-
-    private static class AiJudgeResult {
-        private final BigDecimal score;
-        private final String comment;
-
-        private AiJudgeResult(BigDecimal score, String comment) {
-            this.score = score;
-            this.comment = comment;
-        }
-
-        public BigDecimal getScore() {
-            return score;
-        }
-
-        public String getComment() {
-            return comment;
-        }
+        String normalized = type.trim().toLowerCase();
+        return "single_choice".equals(normalized)
+                || "multiple_choice".equals(normalized)
+                || "true_false".equals(normalized)
+                || "judge".equals(normalized)
+                || "判断题".equals(type.trim());
     }
 
     @Data

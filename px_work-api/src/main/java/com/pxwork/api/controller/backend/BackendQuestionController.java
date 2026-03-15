@@ -106,7 +106,7 @@ public class BackendQuestionController {
         try {
             String fileId = difyApiService.uploadFile(file);
             Map<String, Object> inputs = Map.of("job_role", jobRoleTag);
-            String aiOutputJson = difyApiService.runWorkflow(inputs, fileId);
+            String aiOutputJson = difyApiService.runGenerateWorkflow(inputs, fileId);
             List<JSONObject> aiQuestionItems = parseAiQuestionItems(aiOutputJson);
             if (aiQuestionItems.isEmpty()) {
                 return Result.fail("AI 未生成可导入题目");

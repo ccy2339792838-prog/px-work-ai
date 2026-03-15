@@ -10,7 +10,6 @@ import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * <p>
@@ -81,8 +80,8 @@ public class User implements Serializable {
     private LocalDateTime updatedAt;
 
     @TableField(exist = false)
-    private List<Long> departmentIds;
+    private Long departmentId;
     
     @TableField(exist = false)
-    private List<Department> departments;
+    private Department department;
 }

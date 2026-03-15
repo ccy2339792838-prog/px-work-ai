@@ -51,7 +51,7 @@ public class UserController {
     @Autowired
     private SysDictService sysDictService;
 
-    @Operation(summary = "学员分页列表", description = "获取学员分页列表(包含部门信息)")
+    @Operation(summary = "学员分页列表", description = "获取学员分页列表(单部门信息)")
     @GetMapping("/list")
     public Result<Page<User>> list(
             @RequestParam(defaultValue = "1") Integer current,
@@ -62,14 +62,14 @@ public class UserController {
         return Result.success(userService.pageWithDepts(page, name));
     }
 
-    @Operation(summary = "新增学员", description = "创建新学员(支持分配部门)")
+    @Operation(summary = "新增学员", description = "创建新学员(仅支持绑定一个部门)")
     @PostMapping("/create")
     public Result<Boolean> create(@RequestBody User user) {
         boolean success = userService.createUser(user);
         return success ? Result.success(true) : Result.fail("创建失败");
     }
 
-    @Operation(summary = "修改学员", description = "更新学员信息(支持分配部门)")
+    @Operation(summary = "修改学员", description = "更新学员信息(仅支持绑定一个部门)")
     @PutMapping("/update")
     public Result<Boolean> update(@RequestBody User user) {
         boolean success = userService.updateUser(user);
