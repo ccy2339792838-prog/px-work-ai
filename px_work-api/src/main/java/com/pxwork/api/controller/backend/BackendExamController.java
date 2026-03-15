@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
@@ -28,15 +30,19 @@ import com.pxwork.course.entity.Exam;
 import com.pxwork.course.entity.ExamQuestion;
 import com.pxwork.course.entity.Question;
 import com.pxwork.course.entity.UserExam;
+import com.pxwork.course.entity.UserExamAnswer;
 import com.pxwork.course.service.CourseService;
 import com.pxwork.course.service.ExamQuestionService;
 import com.pxwork.course.service.ExamService;
 import com.pxwork.course.service.QuestionService;
+import com.pxwork.course.service.UserExamAnswerService;
 import com.pxwork.course.service.UserExamService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -59,6 +65,9 @@ public class BackendExamController {
 
     @Autowired
     private UserExamService userExamService;
+
+    @Autowired
+    private UserExamAnswerService userExamAnswerService;
 
     @Operation(summary = "考试分页列表")
     @GetMapping("/exams")
@@ -191,19 +200,108 @@ public class BackendExamController {
         return Result.success(true);
     }
 
-    @Operation(summary = "批改主观题总分")
-    @PutMapping("/user-exams/{userExamId}/subjective-grade")
-    public Result<Map<String, Object>> subjectiveGrade(@PathVariable Long userExamId, @RequestBody @Validated SubjectiveGradeRequest request) {
-        UserExam userExam = userExamService.getById(userExamId);
+    @Operation(summary = "待批改试卷详情")
+    @GetMapping("/user-exams/{id}/grading-detail")
+    public Result<Map<String, Object>> gradingDetail(@PathVariable Long id) {
+        UserExam userExam = userExamService.getById(id);
         if (userExam == null) {
             return Result.fail("学员考试记录不存在");
         }
-        userExam.setSubjectiveScore(request.getSubjectiveScore());
+        List<UserExamAnswer> answerList = userExamAnswerService.list(new LambdaQueryWrapper<UserExamAnswer>()
+                .eq(UserExamAnswer::getUserExamId, id));
+        List<UserExamAnswer> subjectiveAnswers = answerList.stream()
+                .filter(item -> item.getIsCorrect() == null)
+                .collect(Collectors.toList());
+
+        List<GradingQuestionDetailVO> details = new ArrayList<>();
+        if (!subjectiveAnswers.isEmpty()) {
+            Set<Long> questionIds = subjectiveAnswers.stream()
+                    .map(UserExamAnswer::getQuestionId)
+                    .collect(Collectors.toSet());
+            List<Question> questionList = questionService.list(new LambdaQueryWrapper<Question>().in(Question::getId, questionIds));
+            Map<Long, Question> questionMap = questionList.stream().collect(Collectors.toMap(Question::getId, item -> item));
+
+            for (UserExamAnswer answer : subjectiveAnswers) {
+                Question question = questionMap.get(answer.getQuestionId());
+                if (question == null) {
+                    continue;
+                }
+                GradingQuestionDetailVO vo = new GradingQuestionDetailVO();
+                vo.setQuestionId(answer.getQuestionId());
+                vo.setQuestion(question.getContent());
+                vo.setStudentAnswer(answer.getUserAnswer());
+                vo.setStandardAnswer(question.getStandardAnswer());
+                vo.setAiScore(answer.getScore());
+                vo.setAiComment(answer.getAiComment());
+                vo.setTeacherComment(answer.getTeacherComment());
+                details.add(vo);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userExamId", userExam.getId());
+        result.put("examId", userExam.getExamId());
+        result.put("subjectiveQuestions", details);
+        return Result.success(result);
+    }
+
+    @Operation(summary = "提交主观题最终批改结果")
+    @PutMapping("/user-exams/{id}/subjective-grade")
+    public Result<Map<String, Object>> subjectiveGrade(@PathVariable Long id, @RequestBody @Validated SubjectiveGradeRequest request) {
+        if (request.getUserExamId() == null || !id.equals(request.getUserExamId())) {
+            return Result.fail("路径参数与请求中的考试记录ID不一致");
+        }
+        UserExam userExam = userExamService.getById(id);
+        if (userExam == null) {
+            return Result.fail("学员考试记录不存在");
+        }
+
+        Set<Long> questionIds = request.getItems().stream().map(SubjectiveGradeItem::getQuestionId).collect(Collectors.toSet());
+        List<UserExamAnswer> storedAnswers = userExamAnswerService.list(new LambdaQueryWrapper<UserExamAnswer>()
+                .eq(UserExamAnswer::getUserExamId, id)
+                .in(UserExamAnswer::getQuestionId, questionIds));
+        Map<Long, UserExamAnswer> answerMap = storedAnswers.stream()
+                .collect(Collectors.toMap(UserExamAnswer::getQuestionId, item -> item, (a, b) -> a));
+
+        List<UserExamAnswer> toUpdate = new ArrayList<>();
+        BigDecimal subjectiveScore = BigDecimal.ZERO;
+        for (SubjectiveGradeItem item : request.getItems()) {
+            UserExamAnswer answer = answerMap.get(item.getQuestionId());
+            if (answer == null) {
+                return Result.fail("题目[" + item.getQuestionId() + "]答题记录不存在");
+            }
+            if (answer.getIsCorrect() != null) {
+                return Result.fail("题目[" + item.getQuestionId() + "]不是主观题，无法人工批改");
+            }
+            answer.setScore(item.getScore());
+            answer.setTeacherComment(item.getTeacherComment());
+            toUpdate.add(answer);
+            subjectiveScore = subjectiveScore.add(item.getScore());
+        }
+
+        if (!toUpdate.isEmpty()) {
+            userExamAnswerService.updateBatchById(toUpdate);
+        }
+
+        userExam.setSubjectiveScore(subjectiveScore);
         boolean updated = userExamService.updateById(userExam);
         if (!updated) {
             return Result.fail("更新主观题成绩失败");
         }
-        return Result.success(userExamService.calculateFinalResult(userExamId));
+
+        Exam exam = examService.getById(userExam.getExamId());
+        BigDecimal practicalWeight = exam == null || exam.getWeightPractical() == null ? BigDecimal.ZERO : exam.getWeightPractical();
+        if (practicalWeight.compareTo(BigDecimal.ZERO) == 0) {
+            Map<String, Object> finalResult = userExamService.calculateFinalResult(id);
+            finalResult.put("finalized", true);
+            return Result.success(finalResult);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userExamId", userExam.getId());
+        result.put("subjectiveScore", subjectiveScore);
+        result.put("finalized", false);
+        return Result.success(result);
     }
 
     @Operation(summary = "录入实操成绩")
@@ -268,13 +366,36 @@ public class BackendExamController {
 
     @Data
     public static class SubjectiveGradeRequest {
-        @NotNull(message = "主观题总分不能为空")
-        private BigDecimal subjectiveScore;
+        @NotNull(message = "考试记录ID不能为空")
+        private Long userExamId;
+        @NotEmpty(message = "批改明细不能为空")
+        @Valid
+        private List<SubjectiveGradeItem> items;
+    }
+
+    @Data
+    public static class SubjectiveGradeItem {
+        @NotNull(message = "题目ID不能为空")
+        private Long questionId;
+        @NotNull(message = "分数不能为空")
+        private BigDecimal score;
+        private String teacherComment;
     }
 
     @Data
     public static class PracticalGradeRequest {
         @NotNull(message = "实操成绩不能为空")
         private BigDecimal practicalScore;
+    }
+
+    @Data
+    public static class GradingQuestionDetailVO {
+        private Long questionId;
+        private String question;
+        private String studentAnswer;
+        private String standardAnswer;
+        private BigDecimal aiScore;
+        private String aiComment;
+        private String teacherComment;
     }
 }

@@ -37,3 +37,8 @@ springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: alpha
+
+ai:
+  dify:
+    base-url: "http://192.168.1.51/v1"
+    api-key: "app-oQqcYxrLtdxuX5CoBTcDoFGg"
