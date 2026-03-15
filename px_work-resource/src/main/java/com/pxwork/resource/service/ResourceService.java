@@ -2,6 +2,7 @@ package com.pxwork.resource.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.pxwork.resource.entity.Resource;
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +14,5 @@ import com.pxwork.resource.entity.Resource;
  */
 public interface ResourceService extends IService<Resource> {
 
+    boolean moveResources(List<Long> ids, Long targetCategoryId);
 }

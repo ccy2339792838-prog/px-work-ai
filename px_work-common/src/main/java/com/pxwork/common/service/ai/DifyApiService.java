@@ -1,7 +1,6 @@
 package com.pxwork.common.service.ai;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,16 +34,15 @@ public class DifyApiService {
     private String gradeKey;
 
     public String uploadFile(MultipartFile file) {
-        try (InputStream inputStream = file.getInputStream();
-             HttpResponse response = HttpRequest.post(baseUrl + "/files/upload")
-                     .header("Authorization", "Bearer " + generateKey)
-                     .form("file", inputStream, file.getOriginalFilename())
-                     .form("user", USER)
-                     .execute()) {
+        try (HttpResponse response = HttpRequest.post(baseUrl + "/files/upload")
+                .header("Authorization", "Bearer " + generateKey)
+                .form("file", file.getBytes(), file.getOriginalFilename())
+                .form("user", USER)
+                .execute()) {
             String body = response.body();
             if (!response.isOk()) {
                 log.error("Dify upload failed, status={}, body={}", response.getStatus(), body);
-                throw new RuntimeException("调用 Dify 文件上传失败");
+                throw new RuntimeException("Dify上传失败: HTTP " + response.getStatus() + " - " + body);
             }
             JSONObject jsonObject = JSONUtil.parseObj(body);
             String id = jsonObject.getStr("id");

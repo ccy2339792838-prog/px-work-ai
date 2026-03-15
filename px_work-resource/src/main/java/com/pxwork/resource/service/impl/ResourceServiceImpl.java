@@ -1,5 +1,8 @@
 package com.pxwork.resource.service.impl;
 
+import java.util.List;
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.pxwork.resource.entity.Resource;
 import com.pxwork.resource.mapper.ResourceMapper;
@@ -17,4 +20,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> implements ResourceService {
 
+    @Override
+    public boolean moveResources(List<Long> ids, Long targetCategoryId) {
+        return this.update(new LambdaUpdateWrapper<Resource>()
+                .set(Resource::getCategoryId, targetCategoryId)
+                .in(Resource::getId, ids));
+    }
 }

@@ -41,5 +41,5 @@ springdoc:
 ai:
   dify:
     base-url: "http://192.168.1.51/v1"
-    generate-key: "YOUR_GENERATE_KEY"
+    generate-key: "app-oQqcYxrLtdxuX5CoBTcDoFGg"
     grade-key: "YOUR_GRADE_KEY"
