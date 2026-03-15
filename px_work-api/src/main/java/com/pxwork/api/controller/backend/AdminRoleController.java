@@ -1,6 +1,7 @@
 package com.pxwork.api.controller.backend;
 
-import org.apache.commons.lang3.StringUtils;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pxwork.common.utils.Result;
 import com.pxwork.system.entity.AdminRole;
@@ -43,15 +43,8 @@ public class AdminRoleController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String name) {
-        
         Page<AdminRole> page = new Page<>(current, size);
-        LambdaQueryWrapper<AdminRole> queryWrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.isNotBlank(name)) {
-            queryWrapper.like(AdminRole::getName, name);
-        }
-        queryWrapper.orderByDesc(AdminRole::getCreatedAt);
-        
-        return Result.success(adminRoleService.page(page, queryWrapper));
+        return Result.success(adminRoleService.pageWithPermissionCount(page, name));
     }
 
     @Operation(summary = "新增角色", description = "创建新角色")
@@ -73,5 +66,18 @@ public class AdminRoleController {
     public Result<Boolean> delete(@PathVariable Long id) {
         boolean success = adminRoleService.removeById(id);
         return success ? Result.success(true) : Result.fail("删除失败");
+    }
+
+    @Operation(summary = "查询角色菜单", description = "获取角色已分配菜单ID集合")
+    @GetMapping("/{roleId}/menus")
+    public Result<List<Long>> roleMenus(@PathVariable Long roleId) {
+        return Result.success(adminRoleService.getRoleMenuIds(roleId));
+    }
+
+    @Operation(summary = "分配角色菜单", description = "重置并保存角色菜单关联")
+    @PutMapping("/{roleId}/menus")
+    public Result<Boolean> assignMenus(@PathVariable Long roleId, @RequestBody List<Long> menuIds) {
+        boolean success = adminRoleService.assignMenus(roleId, menuIds);
+        return success ? Result.success(true) : Result.fail("分配失败");
     }
 }
