@@ -29,7 +29,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * @author TraeAI
  * @since 2026-03-13
  */
-@Tag(name = "1.2 后台-角色权限管理")
+@Tag(name = "1.2 后台-角色与权限管理")
 @RestController
 @RequestMapping("/admin-role")
 public class AdminRoleController {
@@ -68,13 +68,13 @@ public class AdminRoleController {
         return success ? Result.success(true) : Result.fail("删除失败");
     }
 
-    @Operation(summary = "查询角色菜单", description = "获取角色已分配菜单ID集合")
+    @Operation(summary = "获取角色已分配的权限ID集合", description = "获取角色已分配菜单ID集合")
     @GetMapping("/{roleId}/menus")
     public Result<List<Long>> roleMenus(@PathVariable Long roleId) {
         return Result.success(adminRoleService.getRoleMenuIds(roleId));
     }
 
-    @Operation(summary = "分配角色菜单", description = "重置并保存角色菜单关联")
+    @Operation(summary = "为角色分配/更新权限", description = "重置并保存角色菜单关联")
     @PutMapping("/{roleId}/menus")
     public Result<Boolean> assignMenus(@PathVariable Long roleId, @RequestBody List<Long> menuIds) {
         boolean success = adminRoleService.assignMenus(roleId, menuIds);

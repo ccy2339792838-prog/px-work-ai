@@ -1,7 +1,8 @@
 package com.pxwork.api.config;
 
-import com.pxwork.api.interceptor.AdminInterceptor;
 import com.pxwork.api.interceptor.FrontInterceptor;
+import cn.dev33.satoken.interceptor.SaInterceptor;
+import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,18 +27,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private String uploadDir;
 
     @Bean
-    public AdminInterceptor adminInterceptor() {
-        return new AdminInterceptor();
-    }
-
-    @Bean
     public FrontInterceptor frontInterceptor() {
         return new FrontInterceptor();
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(adminInterceptor())
+        registry.addInterceptor(new SaInterceptor(handle -> {
+                    StpUtil.checkLogin();
+                }))
                 .addPathPatterns(
                         "/backend/**",
                         "/admin-user/**",
@@ -49,7 +47,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/course/**")
                 .excludePathPatterns(
                         "/backend/login",
-                        "/frontend/login",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**",

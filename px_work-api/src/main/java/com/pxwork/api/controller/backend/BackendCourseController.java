@@ -20,6 +20,7 @@ import com.pxwork.course.entity.CourseChapter;
 import com.pxwork.course.service.CourseChapterService;
 import com.pxwork.course.service.CourseService;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -43,6 +44,7 @@ public class BackendCourseController {
     private CourseChapterService courseChapterService;
 
     @Operation(summary = "课程分页列表", description = "获取所有课程，可根据名称或分类筛选")
+    @SaCheckPermission("course:list")
     @GetMapping("/list")
     public Result<Page<Course>> list(
             @RequestParam(defaultValue = "1") Integer current,
@@ -73,18 +75,21 @@ public class BackendCourseController {
     }
 
     @Operation(summary = "创建课程")
+    @SaCheckPermission("course:add")
     @PostMapping("/add")
     public Result<Boolean> create(@RequestBody Course course) {
         return Result.success(courseService.save(course));
     }
 
     @Operation(summary = "更新课程")
+    @SaCheckPermission("course:update")
     @PutMapping("/update")
     public Result<Boolean> update(@RequestBody Course course) {
         return Result.success(courseService.updateById(course));
     }
 
     @Operation(summary = "删除课程", description = "级联删除章节和课时")
+    @SaCheckPermission("course:delete")
     @DeleteMapping("/delete/{id}")
     public Result<Boolean> delete(@PathVariable Long id) {
         long chapterCount = courseChapterService.count(new LambdaQueryWrapper<CourseChapter>().eq(CourseChapter::getCourseId, id));
@@ -98,6 +103,7 @@ public class BackendCourseController {
     }
 
     @Operation(summary = "获取课程详情")
+    @SaCheckPermission("course:query")
     @GetMapping("/detail/{id}")
     public Result<Course> detail(@PathVariable Long id) {
         Course course = courseService.getCourseDetails(id);

@@ -14,7 +14,7 @@ import com.pxwork.system.service.AdminMenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "1.6 后台-菜单权限管理")
+@Tag(name = "1.2 后台-角色与权限管理")
 @RestController
 @RequestMapping("/admin-menu")
 public class AdminMenuController {
@@ -22,7 +22,7 @@ public class AdminMenuController {
     @Autowired
     private AdminMenuService adminMenuService;
 
-    @Operation(summary = "权限树", description = "获取完整菜单权限树")
+    @Operation(summary = "获取系统权限菜单树", description = "获取完整菜单权限树")
     @GetMapping("/tree")
     public Result<List<AdminMenu>> tree() {
         return Result.success(adminMenuService.getMenuTree());
