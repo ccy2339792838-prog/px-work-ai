@@ -1,6 +1,7 @@
 package com.pxwork.common.service.ai;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,6 +33,7 @@ public class DifyApiService {
     private String gradeKey;
 
     public String uploadFile(MultipartFile file) {
+        // 修复1：文件上传接口必须是 /files/upload
         try (HttpResponse response = HttpRequest.post(baseUrl + "/files/upload")
                 .header("Authorization", "Bearer " + generateKey)
                 .form("file", file.getBytes(), file.getOriginalFilename())
@@ -70,17 +72,21 @@ public class DifyApiService {
     private String runWorkflowWithKey(Map<String, Object> inputs, String fileId, String apiKey) {
         try {
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("inputs", inputs);
-            requestBody.put("response_mode", "blocking");
-            requestBody.put("user", USER);
 
+            // 修复2：把上传好的文件信息直接放进 inputs 里面，而不是放进外面的 files 数组里！
             if (fileId != null && !fileId.isBlank()) {
                 Map<String, Object> fileObj = new HashMap<>();
                 fileObj.put("type", "document");
                 fileObj.put("transfer_method", "local_file");
                 fileObj.put("upload_file_id", fileId);
+                // Dify 的变量名是 file，所以 key 是 "file"
                 inputs.put("file", fileObj);
             }
+
+            requestBody.put("inputs", inputs);
+            requestBody.put("response_mode", "blocking");
+            requestBody.put("user", USER);
+            log.info("Dify workflow request prepared, inputKeys={}, hasFile={}", new ArrayList<>(inputs.keySet()), inputs.containsKey("file"));
 
             try (HttpResponse response = HttpRequest.post(baseUrl + "/workflows/run")
                     .header("Authorization", "Bearer " + apiKey)
@@ -90,7 +96,7 @@ public class DifyApiService {
                 String body = response.body();
                 if (!response.isOk()) {
                     log.error("Dify workflow failed, status={}, body={}", response.getStatus(), body);
-                    throw new RuntimeException("调用 Dify 工作流失败");
+                    throw new RuntimeException("调用 Dify 工作流失败，Dify的原始报错是: " + body);
                 }
 
                 JSONObject responseObj;

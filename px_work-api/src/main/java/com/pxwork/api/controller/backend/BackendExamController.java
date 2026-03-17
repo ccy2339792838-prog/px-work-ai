@@ -252,7 +252,7 @@ public class BackendExamController {
 
             String fileId = difyApiService.uploadFile(file);
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("job_role", jobRoleTag);
+            inputs.put("job_roles", jobRoleTag);
             inputs.put("question_requirements", questionRequirements);
             String aiRawJson = difyApiService.runGenerateWorkflow(inputs, fileId);
             System.out.println("====== AI 原始返回数据 ======");

@@ -117,7 +117,7 @@ public class BackendQuestionController {
         try {
             String fileId = difyApiService.uploadFile(file);
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("job_role", jobRoleTag);
+            inputs.put("job_roles", jobRoleTag);
             inputs.put("question_count", 5);
             String aiOutputJson = difyApiService.runGenerateWorkflow(inputs, fileId);
             List<Question> questions = aiQuestionParseUtil.parseQuestions(aiOutputJson, jobRoleTag, categoryId);
