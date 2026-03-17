@@ -1,5 +1,11 @@
 package com.pxwork.api.controller.backend;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,8 +23,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pxwork.common.utils.Result;
 import com.pxwork.course.entity.Course;
 import com.pxwork.course.entity.CourseChapter;
+import com.pxwork.course.service.CourseResourceService;
 import com.pxwork.course.service.CourseChapterService;
 import com.pxwork.course.service.CourseService;
+import com.pxwork.resource.entity.Resource;
+import com.pxwork.resource.service.ResourceService;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,7 +43,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @Tag(name = "2.1 后台-课程建设管理")
 @RestController
-@RequestMapping("/backend/course")
+@RequestMapping({"/backend/course", "/backend/courses"})
 public class BackendCourseController {
 
     @Autowired
@@ -42,6 +51,12 @@ public class BackendCourseController {
 
     @Autowired
     private CourseChapterService courseChapterService;
+
+    @Autowired
+    private CourseResourceService courseResourceService;
+
+    @Autowired
+    private ResourceService resourceService;
 
     @Operation(summary = "课程分页列表", description = "获取所有课程，可根据名称或分类筛选")
     @SaCheckPermission("course:list")
@@ -111,5 +126,57 @@ public class BackendCourseController {
             return Result.fail("课程不存在");
         }
         return Result.success(course);
+    }
+
+    @Operation(summary = "绑定课程资料")
+    @PostMapping("/{id}/bind-resources")
+    public Result<Map<String, Object>> bindResources(@PathVariable Long id, @RequestBody List<Long> resourceIds) {
+        try {
+            return Result.success(courseResourceService.bindResources(id, resourceIds));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "获取课程资料列表")
+    @GetMapping("/{id}/resources")
+    public Result<List<Resource>> resources(@PathVariable Long id) {
+        if (courseService.getById(id) == null) {
+            return Result.fail("课程不存在");
+        }
+        List<Long> resourceIds = courseResourceService.listResourceIdsByCourse(id);
+        if (resourceIds.isEmpty()) {
+            return Result.success(List.of());
+        }
+        List<Resource> resources = resourceService.list(new LambdaQueryWrapper<Resource>().in(Resource::getId, resourceIds));
+        Map<Long, Resource> resourceMap = new HashMap<>();
+        for (Resource resource : resources) {
+            resourceMap.put(resource.getId(), resource);
+        }
+        List<Resource> ordered = new ArrayList<>();
+        Set<Long> seenIds = new java.util.HashSet<>();
+        for (Long resourceId : resourceIds) {
+            if (!seenIds.add(resourceId)) {
+                continue;
+            }
+            Resource resource = resourceMap.get(resourceId);
+            if (resource != null) {
+                ordered.add(resource);
+            }
+        }
+        return Result.success(ordered);
+    }
+
+    @Operation(summary = "解绑课程资料")
+    @DeleteMapping("/{id}/resources/{resourceId}")
+    public Result<Boolean> unbindResource(@PathVariable Long id, @PathVariable Long resourceId) {
+        if (courseService.getById(id) == null) {
+            return Result.fail("课程不存在");
+        }
+        boolean removed = courseResourceService.unbindResource(id, resourceId);
+        if (!removed) {
+            return Result.fail("课程未绑定该资料");
+        }
+        return Result.success(true);
     }
 }

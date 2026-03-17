@@ -159,21 +159,23 @@ public class BackendExamController {
 
     @Operation(summary = "传统自动组卷")
     @PostMapping("/exams/{id}/auto-generate")
-    public Result<Map<String, Object>> autoGenerate(@PathVariable Long id, @RequestBody Map<String, Integer> questionTypeCountMap) {
+    public Result<Map<String, Object>> autoGenerate(@PathVariable Long id, @RequestBody Map<String, QuestionTypeConfig> questionConfigMap) {
         Exam exam = examService.getById(id);
         if (exam == null) {
             return Result.fail("考试不存在");
         }
-        if (questionTypeCountMap == null || questionTypeCountMap.isEmpty()) {
+        if (questionConfigMap == null || questionConfigMap.isEmpty()) {
             return Result.fail("题型抽取配置不能为空");
         }
         Course course = courseService.getById(exam.getCourseId());
 
         List<ExamQuestion> generated = new ArrayList<>();
         int sort = 1;
-        for (Map.Entry<String, Integer> entry : questionTypeCountMap.entrySet()) {
+        for (Map.Entry<String, QuestionTypeConfig> entry : questionConfigMap.entrySet()) {
             String questionType = entry.getKey();
-            Integer count = entry.getValue();
+            QuestionTypeConfig config = entry.getValue();
+            Integer count = config == null ? null : config.getCount();
+            BigDecimal score = config == null || config.getScore() == null ? BigDecimal.ONE : config.getScore();
             if (!StringUtils.hasText(questionType) || count == null || count <= 0) {
                 continue;
             }
@@ -204,7 +206,7 @@ public class BackendExamController {
                 ExamQuestion examQuestion = new ExamQuestion();
                 examQuestion.setExamId(id);
                 examQuestion.setQuestionId(question.getId());
-                examQuestion.setScore(BigDecimal.ONE);
+                examQuestion.setScore(score);
                 examQuestion.setSort(sort++);
                 generated.add(examQuestion);
             }
@@ -226,7 +228,7 @@ public class BackendExamController {
             @RequestParam("courseId") Long courseId,
             @RequestParam("title") String title,
             @RequestParam("jobRoleTag") String jobRoleTag,
-            @RequestParam(value = "questionConfig", defaultValue = "{\"单选\":5}") String questionConfigJson) {
+            @RequestParam(value = "questionConfig", defaultValue = "{\"单选\":{\"count\":5,\"score\":1}}") String questionConfigJson) {
         if (file == null || file.isEmpty()) {
             return Result.fail("课件文档不能为空");
         }
@@ -243,17 +245,23 @@ public class BackendExamController {
             return Result.fail("课程不存在");
         }
         try {
-            Map<String, Integer> configMap = objectMapper.readValue(questionConfigJson, new TypeReference<Map<String, Integer>>() {
+            Map<String, QuestionTypeConfig> configMap = objectMapper.readValue(questionConfigJson, new TypeReference<Map<String, QuestionTypeConfig>>() {
             });
             if (configMap == null || configMap.isEmpty()) {
                 return Result.fail("题型数量配置不能为空");
             }
             StringBuilder requirementsBuilder = new StringBuilder();
             int totalExpected = 0;
-            for (Map.Entry<String, Integer> entry : configMap.entrySet()) {
-                if (entry.getValue() != null && entry.getValue() > 0) {
-                    requirementsBuilder.append("【").append(entry.getKey()).append("】").append(entry.getValue()).append("道，");
-                    totalExpected += entry.getValue();
+            Map<String, BigDecimal> typeScoreMap = new HashMap<>();
+            for (Map.Entry<String, QuestionTypeConfig> entry : configMap.entrySet()) {
+                QuestionTypeConfig config = entry.getValue();
+                Integer count = config == null ? null : config.getCount();
+                if (count != null && count > 0) {
+                    requirementsBuilder.append("【").append(entry.getKey()).append("】").append(count).append("道，");
+                    totalExpected += count;
+                    String normalizedType = normalizeQuestionType(entry.getKey());
+                    BigDecimal score = config.getScore() == null ? BigDecimal.ONE : config.getScore();
+                    typeScoreMap.put(normalizedType, score);
                 }
             }
             if (totalExpected == 0) {
@@ -304,7 +312,7 @@ public class BackendExamController {
                 ExamQuestion examQuestion = new ExamQuestion();
                 examQuestion.setExamId(exam.getId());
                 examQuestion.setQuestionId(question.getId());
-                examQuestion.setScore(new BigDecimal("10"));
+                examQuestion.setScore(typeScoreMap.getOrDefault(question.getQuestionType(), BigDecimal.ONE));
                 examQuestion.setSort(sort++);
                 examQuestions.add(examQuestion);
             }
@@ -636,6 +644,12 @@ public class BackendExamController {
         private BigDecimal passEndScore;
         @NotNull(message = "实操合格分不能为空")
         private BigDecimal passPracticalScore;
+    }
+
+    @Data
+    public static class QuestionTypeConfig {
+        private Integer count;
+        private BigDecimal score;
     }
 
     @Data
