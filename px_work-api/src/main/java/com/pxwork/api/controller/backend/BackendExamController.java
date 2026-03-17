@@ -146,6 +146,17 @@ public class BackendExamController {
         return Result.success(examService.removeById(id));
     }
 
+    @Operation(summary = "手动绑定试卷题目")
+    @PostMapping("/exams/{id}/bind-questions")
+    public Result<Map<String, Object>> bindQuestions(@PathVariable Long id, @RequestBody List<Long> questionIds) {
+        try {
+            Map<String, Object> result = examQuestionService.bindQuestions(id, questionIds);
+            return Result.success(result);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     @Operation(summary = "传统自动组卷")
     @PostMapping("/exams/{id}/auto-generate")
     public Result<Map<String, Object>> autoGenerate(@PathVariable Long id, @RequestBody Map<String, Integer> questionTypeCountMap) {
