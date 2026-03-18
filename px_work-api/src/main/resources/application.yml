@@ -3,15 +3,15 @@ server:
 
 app:
   upload-dir: D:/px/backend/uploads
-  
+
 spring:
   application:
     name: px_work-api
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/platrom?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/platorm?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
-    password: "root"
+    password: "123456"
   web:
     resources:
       static-locations: classpath:/static/,classpath:/public/,classpath:/resources/,classpath:/META-INF/resources/
@@ -43,3 +43,9 @@ ai:
     base-url: "http://192.168.1.51:8099/v1"
     generate-key: "app-oQqcYxrLtdxuX5CoBTcDoFGg"
     grade-key: "YOUR_GRADE_KEY"
+
+# logging 配置必须与 spring 平级，不能缩进到 ai 下面
+logging:
+  level:
+    com.zaxxer.hikari: DEBUG
+    org.springframework.jdbc: DEBUG
