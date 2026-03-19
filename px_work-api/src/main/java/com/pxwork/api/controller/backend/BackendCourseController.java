@@ -43,7 +43,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @Tag(name = "2.1 后台-课程建设管理")
 @RestController
-@RequestMapping({"/backend/course", "/backend/courses"})
+@RequestMapping({"/backend/course"})
 public class BackendCourseController {
 
     @Autowired
