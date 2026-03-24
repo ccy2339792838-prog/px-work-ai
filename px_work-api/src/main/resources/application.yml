@@ -42,7 +42,8 @@ ai:
   dify:
     base-url: "http://192.168.1.51:8099/v1"
     generate-key: "app-oQqcYxrLtdxuX5CoBTcDoFGg"
-    grade-key: "YOUR_GRADE_KEY"
+    grade-key: "app-2YRW4daPCMB7oPc4wZ8yC1Qb"
+    outline-key: "app-TsW33qnmMXIDlY7DhGwSB0Al"
 
 # logging 配置必须与 spring 平级，不能缩进到 ai 下面
 logging:
