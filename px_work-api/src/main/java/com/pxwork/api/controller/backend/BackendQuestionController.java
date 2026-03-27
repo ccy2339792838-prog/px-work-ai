@@ -163,4 +163,44 @@ public class BackendQuestionController {
         }
         return Result.success(questionService.removeById(id));
     }
+
+    @Operation(summary = "查询指定试卷绑定的所有题目")
+    @GetMapping("/exam/{examId}")
+    public Result<List<Map<String, Object>>> getQuestionsByExamId(@PathVariable Long examId) {
+        // 1. 去关联表查出题目ID
+        List<ExamQuestion> examQuestions = examQuestionService.list(
+                new LambdaQueryWrapper<ExamQuestion>()
+                .eq(ExamQuestion::getExamId, examId)
+                .orderByAsc(ExamQuestion::getSort)
+        );
+
+        if (examQuestions == null || examQuestions.isEmpty()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+
+        List<Long> questionIds = examQuestions.stream()
+                .map(ExamQuestion::getQuestionId)
+                .collect(java.util.stream.Collectors.toList());
+
+        // 2. 查出完整的题目对象
+        List<Question> questions = questionService.listByIds(questionIds);
+
+        // 3. 把 Question 对象伪装成 Map，故意不传 categoryId 给前端
+        List<Map<String, Object>> resultList = questions.stream().map(q -> {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("id", q.getId());
+            map.put("questionType", q.getQuestionType());
+            map.put("content", q.getContent());
+            map.put("options", q.getOptions());
+            map.put("standardAnswer", q.getStandardAnswer());
+            map.put("analysis", q.getAnalysis());
+            map.put("industryTag", q.getIndustryTag());
+            map.put("jobRoleTag", q.getJobRoleTag());
+            map.put("createdAt", q.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        // 4. 返回精简后的数据
+        return Result.success(resultList);
+    }
 }
