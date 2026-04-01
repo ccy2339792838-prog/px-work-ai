@@ -21,7 +21,7 @@ public class Question implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    private Long categoryId;
+    private Long courseId;
 
     private String questionType;
 

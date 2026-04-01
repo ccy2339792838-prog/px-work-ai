@@ -18,7 +18,8 @@ public class AiQuestionParseUtil {
     @Autowired
     private ObjectMapper objectMapper;
 
-    public List<Question> parseQuestions(String aiRawJson, String jobRoleTag, Long defaultCategoryId) throws Exception {
+    // 🔴 这里的参数改成了 defaultCourseId
+    public List<Question> parseQuestions(String aiRawJson, String jobRoleTag, Long defaultCourseId) throws Exception {
         String cleanedJson = JsonUtils.cleanMarkdownJson(aiRawJson);
         if (!StringUtils.hasText(cleanedJson)) {
             return List.of();
@@ -27,7 +28,7 @@ public class AiQuestionParseUtil {
         List<Question> result = new ArrayList<>();
         if (root.isArray()) {
             for (JsonNode node : root) {
-                Question question = toQuestion(node, jobRoleTag, defaultCategoryId);
+                Question question = toQuestion(node, jobRoleTag, defaultCourseId);
                 if (question != null) {
                     result.add(question);
                 }
@@ -43,21 +44,22 @@ public class AiQuestionParseUtil {
         }
         if (itemsNode != null && itemsNode.isArray()) {
             for (JsonNode node : itemsNode) {
-                Question question = toQuestion(node, jobRoleTag, defaultCategoryId);
+                Question question = toQuestion(node, jobRoleTag, defaultCourseId);
                 if (question != null) {
                     result.add(question);
                 }
             }
             return result;
         }
-        Question single = toQuestion(root, jobRoleTag, defaultCategoryId);
+        Question single = toQuestion(root, jobRoleTag, defaultCourseId);
         if (single != null) {
             result.add(single);
         }
         return result;
     }
 
-    private Question toQuestion(JsonNode node, String jobRoleTag, Long defaultCategoryId) throws Exception {
+    // 🔴 这里的参数也改成了 defaultCourseId
+    private Question toQuestion(JsonNode node, String jobRoleTag, Long defaultCourseId) throws Exception {
         if (node == null || node.isNull()) {
             return null;
         }
@@ -72,15 +74,16 @@ public class AiQuestionParseUtil {
         question.setStandardAnswer(readText(node, "standard_answer", "standardAnswer"));
         question.setAnalysis(readText(node, "analysis"));
 
-        Long categoryId = defaultCategoryId;
-        String categoryText = readText(node, "category_id", "categoryId");
-        if (StringUtils.hasText(categoryText)) {
+        // 🔴 这里的核心逻辑全改成了 courseId 相关的解析
+        Long courseId = defaultCourseId;
+        String courseText = readText(node, "course_id", "courseId");
+        if (StringUtils.hasText(courseText)) {
             try {
-                categoryId = Long.parseLong(categoryText);
+                courseId = Long.parseLong(courseText);
             } catch (NumberFormatException ignored) {
             }
         }
-        question.setCategoryId(categoryId);
+        question.setCourseId(courseId); // 🔴 最终把解析出来的 courseId 存入实体对象
 
         JsonNode optionsNode = node.get("options");
         if (optionsNode != null && !optionsNode.isNull()) {

@@ -541,8 +541,8 @@ public class BackendExamController {
 
         Question q = questionMap.getOrDefault(id, new Question());
         q.setJobRoleTag(jobRoleTag);
-        if (q.getCategoryId() == null) {
-            q.setCategoryId(0L);
+        if (q.getCourseId() == null) {
+            q.setCourseId(0L);
         }
 
         String content = readText(node, "question", "content", "title");

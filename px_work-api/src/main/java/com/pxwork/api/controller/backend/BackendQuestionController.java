@@ -61,7 +61,7 @@ public class BackendQuestionController {
             @RequestParam(required = false) String questionType,
             @RequestParam(required = false) String industryTag,
             @RequestParam(required = false) String jobRoleTag,
-            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) String content) {
         Page<Question> page = new Page<>(current, size);
         LambdaQueryWrapper<Question> queryWrapper = new LambdaQueryWrapper<>();
@@ -74,9 +74,12 @@ public class BackendQuestionController {
         if (StringUtils.hasText(jobRoleTag)) {
             queryWrapper.apply("FIND_IN_SET({0}, job_role_tag)", jobRoleTag.trim());
         }
-        if (categoryId != null && categoryId > 0) {
-            queryWrapper.eq(Question::getCategoryId, categoryId);
+        
+        // 🔴 关键修复：去掉了 && courseId > 0，这样即便传 0 也能精准查询 course_id = 0 的题目
+        if (courseId != null) { 
+            queryWrapper.eq(Question::getCourseId, courseId);
         }
+        
         if (StringUtils.hasText(content)) {
             queryWrapper.like(Question::getContent, content);
         }
@@ -104,15 +107,15 @@ public class BackendQuestionController {
     @PostMapping(value = "/ai-generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<Map<String, Object>> aiGenerate(@RequestParam("file") MultipartFile file,
             @RequestParam("jobRoleTag") String jobRoleTag,
-            @RequestParam("categoryId") Long categoryId) {
+            @RequestParam("courseId") Long courseId) { 
         if (file == null || file.isEmpty()) {
             return Result.fail("文件不能为空");
         }
         if (!StringUtils.hasText(jobRoleTag)) {
             return Result.fail("岗位标签不能为空");
         }
-        if (categoryId == null || categoryId <= 0) {
-            return Result.fail("题目分类不能为空");
+        if (courseId == null || courseId <= 0) {
+            return Result.fail("所属课程不能为空");
         }
         try {
             String fileId = difyApiService.uploadFile(file);
@@ -120,7 +123,8 @@ public class BackendQuestionController {
             inputs.put("job_roles", jobRoleTag);
             inputs.put("question_count", 5);
             String aiOutputJson = difyApiService.runGenerateWorkflow(inputs, fileId);
-            List<Question> questions = aiQuestionParseUtil.parseQuestions(aiOutputJson, jobRoleTag, categoryId);
+            
+            List<Question> questions = aiQuestionParseUtil.parseQuestions(aiOutputJson, jobRoleTag, courseId);
             if (questions.isEmpty()) {
                 return Result.fail("AI 未生成可导入题目");
             }
@@ -167,7 +171,6 @@ public class BackendQuestionController {
     @Operation(summary = "查询指定试卷绑定的所有题目")
     @GetMapping("/exam/{examId}")
     public Result<List<Map<String, Object>>> getQuestionsByExamId(@PathVariable Long examId) {
-        // 1. 去关联表查出题目ID
         List<ExamQuestion> examQuestions = examQuestionService.list(
                 new LambdaQueryWrapper<ExamQuestion>()
                 .eq(ExamQuestion::getExamId, examId)
@@ -182,10 +185,8 @@ public class BackendQuestionController {
                 .map(ExamQuestion::getQuestionId)
                 .collect(java.util.stream.Collectors.toList());
 
-        // 2. 查出完整的题目对象
         List<Question> questions = questionService.listByIds(questionIds);
 
-        // 3. 把 Question 对象伪装成 Map，故意不传 categoryId 给前端
         List<Map<String, Object>> resultList = questions.stream().map(q -> {
             Map<String, Object> map = new java.util.LinkedHashMap<>();
             map.put("id", q.getId());
@@ -197,10 +198,10 @@ public class BackendQuestionController {
             map.put("industryTag", q.getIndustryTag());
             map.put("jobRoleTag", q.getJobRoleTag());
             map.put("createdAt", q.getCreatedAt());
+            map.put("courseId", q.getCourseId()); // 我顺手把 courseId 给加上了，方便前端调试
             return map;
         }).collect(java.util.stream.Collectors.toList());
 
-        // 4. 返回精简后的数据
         return Result.success(resultList);
     }
 }
