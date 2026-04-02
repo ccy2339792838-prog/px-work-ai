@@ -234,6 +234,28 @@ public class FrontendUserExamController {
                 || "判断题".equals(type.trim());
     }
 
+    // 🔴 下面是为你刚刚加的新接口！
+    @Operation(summary = "获取指定课程下的所有考试列表")
+    @GetMapping("/course/{courseId}")
+    public Result<List<Exam>> getExamsByCourse(@PathVariable Long courseId) {
+        long userId = StpUserUtil.getLoginIdAsLong();
+        
+        // 1. 验证学生是否报名了这门课
+        long enrolled = userCourseEnrollmentService.count(new LambdaQueryWrapper<UserCourseEnrollment>()
+                .eq(UserCourseEnrollment::getUserId, userId)
+                .eq(UserCourseEnrollment::getCourseId, courseId));
+        if (enrolled == 0) {
+            return Result.fail("您尚未报名该课程，无法查看考试");
+        }
+
+        // 2. 查询该课程下所有关联的考试
+        List<Exam> exams = examService.list(new LambdaQueryWrapper<Exam>()
+                .eq(Exam::getCourseId, courseId)
+                .orderByDesc(Exam::getCreatedAt));
+        
+        return Result.success(exams);
+    }
+
     @Data
     public static class StartExamRequest {
         @NotNull(message = "考试ID不能为空")
