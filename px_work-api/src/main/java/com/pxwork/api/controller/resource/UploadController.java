@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType; // 🔴 新增导入
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,7 +43,8 @@ public class UploadController {
     private String uploadDir;
 
     @Operation(summary = "上传文件", description = "上传文件并保存到本地，返回URL")
-    @PostMapping
+    // 🔴 关键修复：在这里明确加上 consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<Resource> upload(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
         if (file.isEmpty()) {
             return Result.fail("文件为空");

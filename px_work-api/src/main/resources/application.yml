@@ -7,6 +7,11 @@ app:
 spring:
   application:
     name: px_work-api
+  # 🔴 下面这三行就是专门加的：解除上传大小限制（最大 1GB）
+  servlet:
+    multipart:
+      max-file-size: 1024MB     
+      max-request-size: 1024MB  
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/platorm?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
