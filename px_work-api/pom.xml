@@ -12,7 +12,6 @@
     <artifactId>px_work-api</artifactId>
 
     <dependencies>
-        <!-- Internal Modules -->
         <dependency>
             <groupId>com.pxwork</groupId>
             <artifactId>px_work-common</artifactId>
@@ -30,14 +29,12 @@
             <artifactId>px_work-resource</artifactId>
         </dependency>
 
-        <!-- Swagger / SpringDoc -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
         </dependency>
 
-        <!-- Spring Boot Web Starter (required for main application) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -56,11 +53,16 @@
             <artifactId>hutool-all</artifactId>
         </dependency>
 
-        <!-- Database Driver -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.tencentyun</groupId>
+            <artifactId>tls-sig-api-v2</artifactId>
+            <version>2.0</version>
         </dependency>
     </dependencies>
 

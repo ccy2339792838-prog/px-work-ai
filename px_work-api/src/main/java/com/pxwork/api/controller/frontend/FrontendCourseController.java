@@ -81,34 +81,35 @@ public class FrontendCourseController {
         // 3. 查出该课程的所有【章节】
         List<CourseChapter> chapters = courseChapterService.list(
                 new LambdaQueryWrapper<CourseChapter>().eq(CourseChapter::getCourseId, id));
-        result.put("chapters", chapters); // 保留平铺数据，防呆
+        result.put("chapters", chapters);
 
-        // 4. 🔴 终极树形结构逻辑：组装 chapterTree
+        // 4. 🔴 终极备用方案：重组树形结构，完美迎合前端组件！
         List<CourseHour> hours = new ArrayList<>();
-        List<Map<String, Object>> chapterTree = new ArrayList<>(); // 用来装“章节+课时”的树
+        List<Map<String, Object>> chapterTree = new ArrayList<>(); 
         
         if (!chapters.isEmpty()) {
             List<Long> chapterIds = chapters.stream().map(CourseChapter::getId).collect(Collectors.toList());
             
-            // 查出所有课时，并按照 sort(排序) 升序排列！保证 1-1 在 1-2 前面
             hours = courseHourService.list(
                     new LambdaQueryWrapper<CourseHour>()
                             .in(CourseHour::getChapterId, chapterIds)
                             .orderByAsc(CourseHour::getSort));
 
-            // 将课时按照 chapterId 分组
             Map<Long, List<CourseHour>> hourMap = hours.stream().collect(Collectors.groupingBy(CourseHour::getChapterId));
 
-            // 拼装树！
             for (CourseChapter chapter : chapters) {
+                // 直接创建一个展平的 Map
                 Map<String, Object> node = new java.util.LinkedHashMap<>();
-                node.put("chapter", chapter); // 放入章节实体
-                node.put("hours", hourMap.getOrDefault(chapter.getId(), new ArrayList<>())); // 放入该章节下的课时列表
+                node.put("id", chapter.getId());
+                node.put("title", chapter.getName());
+                node.put("sort", chapter.getSort());
+                // 🔴 核心改动：把该章节下的课时列表，直接塞进一个叫 children 的字段里！
+                node.put("children", hourMap.getOrDefault(chapter.getId(), new ArrayList<>())); 
                 chapterTree.add(node);
             }
         }
-        result.put("hours", hours); // 保留平铺数据，防呆
-        result.put("chapterTree", chapterTree); // 🔴 送给前端的完美树形结构
+        result.put("hours", hours); 
+        result.put("chapterTree", chapterTree); // 现在它是一个标准的、带 children 的树形数组了
 
         // 5. 查出该课程的所有【课件资源】
         List<CourseResource> resources = courseResourceService.list(
@@ -120,6 +121,25 @@ public class FrontendCourseController {
                 new LambdaQueryWrapper<Exam>().eq(Exam::getCourseId, id));
         result.put("exams", exams);
 
+        return Result.success(result);
+    }
+
+    @Operation(summary = "获取单个课时详情(学习/播放专用)")
+    @GetMapping("/hour/{hourId}")
+    public Result<Map<String, Object>> getHourDetail(@PathVariable Long hourId) {
+        CourseHour hour = courseHourService.getById(hourId);
+        if (hour == null) {
+            return Result.fail("课时不存在");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("hour", hour);
+        
+        if (hour.getResourceId() != null && hour.getResourceId() > 0) {
+            CourseResource resource = courseResourceService.getById(hour.getResourceId());
+            result.put("resource", resource);
+        }
+        
         return Result.success(result);
     }
 

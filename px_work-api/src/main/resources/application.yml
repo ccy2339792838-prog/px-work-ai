@@ -55,3 +55,8 @@ logging:
   level:
     com.zaxxer.hikari: DEBUG
     org.springframework.jdbc: DEBUG
+  # 腾讯云 TRTC 直播配置
+trtc:
+  appid: 1600135547
+  secret-key: "48cd6305f31e1a916ad6dc792ef8c93b3dd746141765d43d159e9d15de38c63b"
+  expire-time: 86400  # 门票有效期：86400秒（刚好是一天）
